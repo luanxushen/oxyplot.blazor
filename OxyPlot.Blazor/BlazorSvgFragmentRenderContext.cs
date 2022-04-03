@@ -10,6 +10,7 @@
 namespace OxyPlot.Blazor
 {
     using System;
+    using System.Linq;
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
@@ -533,12 +534,13 @@ namespace OxyPlot.Blazor
         /// <returns>A string.</returns>
         private string PointsToString(IEnumerable<ScreenPoint> points)
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(points.Count()*20);
             string fmt = "{0:" + this.NumberFormat + "},{1:" + this.NumberFormat + "} ";
             foreach (var p in points)
             {
                 if (double.IsFinite(p.X) && double.IsFinite(p.Y))
                 {
+                    //sb.Append(FormattableString.Invariant($"{p.X:0.####},{p.Y:0.####} "));
                     sb.AppendFormat(CultureInfo.InvariantCulture, fmt, p.X, p.Y);
                 }
             }
