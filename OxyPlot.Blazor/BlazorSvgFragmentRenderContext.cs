@@ -19,6 +19,7 @@ namespace OxyPlot.Blazor
     using Microsoft.AspNetCore.Components;
     using System.Threading.Tasks;
     using System.Text.RegularExpressions;
+    using System.Linq;
 
     /// <summary>
     /// Provides a render context for scalable vector graphics output.
@@ -532,7 +533,7 @@ namespace OxyPlot.Blazor
         /// <returns>A string.</returns>
         private string PointsToString(IEnumerable<ScreenPoint> points)
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder(points.Count() * 20);
             string fmt = "{0:" + this.NumberFormat + "},{1:" + this.NumberFormat + "} ";
             foreach (var p in points)
             {
