@@ -44,6 +44,18 @@ namespace OxyPlot.Blazor
             var js = await _moduleTask.Value.ConfigureAwait(false);
             await js.InvokeVoidAsync("setCursor", element, cursorName).ConfigureAwait(false);
         }
+        public async ValueTask<DataPoint> GetMousePosAsync(ElementReference element)
+        {
+            var js = await _moduleTask.Value.ConfigureAwait(false);
+            var o = await js.InvokeAsync<double[]>("OxyPlotBlazor.getMousePos", element).ConfigureAwait(false);
+            return new DataPoint(o[0], o[1]);
+
+        }
+        public async ValueTask RegisterMove(DotNetObjectReference<BlazorPlotView> objRef, ElementReference element,  string func)
+        {
+            var js = await _moduleTask.Value.ConfigureAwait(false);
+            await js.InvokeVoidAsync("registerMove", objRef, element, func).ConfigureAwait(false);
+        }
         public async ValueTask DisposeAsync()
         {
             if (_moduleTask.IsValueCreated)

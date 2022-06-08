@@ -8,6 +8,10 @@ export function getBoundingClientRect(e) {
     // System.InvalidOperationException: Cannot get the value of a token type 'Null' as a number.
     return [r.x ?? 0, r.y ?? 0, r.width ?? 0, r.height ?? 0];
 }
+export function getMousePos(e) {
+    const r = e.getBoundingClientRect();
+    return [cursor_x - r.x, cursor_y - r.y];
+}
 
 export function disableContextMenu(element) {
     element.addEventListener('contextmenu', ev => {
@@ -19,4 +23,14 @@ export function disableContextMenu(element) {
 
 export function setCursor(element, cursorName) {
     element.style.cursor = cursorName;
+}
+
+export function registerMove(obj, element, method) {
+
+    element.addEventListener('mousemove', event => {
+        const cursor_x = event.pageX;
+        const cursor_y = event.pageY;
+        obj.invokeMethodAsync(method, [cursor_x, cursor_y]);
+    }
+    );
 }
