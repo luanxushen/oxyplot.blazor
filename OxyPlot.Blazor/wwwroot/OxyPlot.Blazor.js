@@ -34,3 +34,24 @@ export function registerMove(obj, element, method) {
     }
     );
 }
+
+export function registerTouch(obj, element, method) {
+
+    element.addEventListener('touchmove', event => {
+        const ts = event.touches;
+        var touches = [];
+        for (var index = 0; index < ts.length; index++) {
+            var t = ts[index];
+            touches.push({
+                clientX: t.clientX,
+                clientY: t.clientY,
+                pageX: t.pageX,
+                pageY: t.pageY,
+                screenX: t.screenX,
+                screenY: t.screenY
+            })
+        }
+        obj.invokeMethodAsync(method, touches);
+    }
+    );
+}

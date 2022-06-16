@@ -16,6 +16,7 @@ namespace OxyPlot.Blazor
     {
         readonly Timer _timer = new(500) { Enabled = false, };
         readonly Timer _timerMouse = new Timer(500) { Enabled = false, };
+        readonly Timer _timerTouch = new Timer(500) { Enabled = false, };
         bool _disposed;
         [Inject] OxyPlotJsInterop OxyJS { get; set; }
         [Parameter] public string PreserveAspectRation { get; set; } = "none";
@@ -97,7 +98,7 @@ namespace OxyPlot.Blazor
                         _mousePos = m;
                         var e = new MouseEventArgs() { OffsetX = m.X, OffsetY = m.Y };
                         if (_svgPos.Width > 0)
-                            await InvokeAsync(() => ActualController.HandleMouseMove(this, TranslateMouseEventArgs(e))).ConfigureAwait(false);
+                            await Task.Run(() => ActualController.HandleMouseMove(this, TranslateMouseEventArgs(e)));
                     }
 
                     _sem.Release();
@@ -108,6 +109,48 @@ namespace OxyPlot.Blazor
                 // swallow thisone
             }
         }
+
+        private System.Threading.Semaphore _semTouch = new(1, 1);
+        [JSInvokable]
+        public void UpdateTouchPos(TouchPoint[] e)
+        {
+            lock (_currentTouches)
+            {
+                _currentTouches.Clear();
+                foreach (var item in e)
+                    _currentTouches.Add(new ScreenPoint(item.ClientX - _svgPos.Left, item.ClientY - _svgPos.Top));
+            }
+        }
+        async void UpdateTouchMove(object _1, EventArgs _2)
+        {
+            try
+            {
+                if (MouseOptimized)
+                {
+                    if (_currentTouches == null || _currentTouches.Count == 0)
+                        return;
+                    if (!_semTouch.WaitOne(1))
+                        return;
+                    if (_previousTouches == null)
+                        _previousTouches = _currentTouches;
+                    //这里有个风险，如果后面崩溃了，最后release不掉就再也进不来了
+                    List<ScreenPoint> touches = new List<ScreenPoint>();//为了不锁住currentTouch，重新实例化一个用于后续处理
+                    lock (_currentTouches)
+                    {
+                        foreach (ScreenPoint point in _currentTouches)
+                            touches.Add(new ScreenPoint(point.X, point.Y));
+                    }
+                    await Task.Run(() => ActualController.HandleTouchDelta(this, new OxyTouchEventArgs(touches.ToArray(), _previousTouches.ToArray())));
+                    _semTouch.Release();
+                    _previousTouches = _currentTouches;
+                }
+            }
+            catch (Exception)
+            {
+                // swallow thisone
+            }
+        }
+
 
         async void TimerExpired(object _, EventArgs __)
         {
@@ -314,6 +357,7 @@ namespace OxyPlot.Blazor
                 _svg = new ElementReference();
                 _timer.Enabled = false;
                 _timerMouse.Enabled = false;
+                _timerTouch.Enabled = false;
                 return;
             }
             // note this gist about seequence numbers
@@ -357,7 +401,9 @@ namespace OxyPlot.Blazor
                     AddEventCallback<MouseEventArgs>(builder, 5, "onmouseout", e => ActualController.HandleMouseEnter(this, TranslateMouseEventArgs(e)));
                 }
                 AddEventCallback<TouchEventArgs>(builder, 5, "ontouchstart", e => ActualController.HandleTouchStarted(this, TranslateTouchEventArgs(e)));
-                AddEventCallback<TouchEventArgs>(builder, 5, "ontouchmove", e => ActualController.HandleTouchDelta(this, TranslateTouchEventArgs(e)));
+                if (!MouseOptimized)
+                    AddEventCallback<TouchEventArgs>(builder, 5, "ontouchmove", e => ActualController.HandleTouchDelta(this, TranslateTouchEventArgs(e)));
+
                 AddEventCallback<TouchEventArgs>(builder, 5, "ontouchend", e => ActualController.HandleTouchCompleted(this, TranslateTouchEventArgs(e)));
                 // wheel, prevent default does not work
                 builder.AddAttribute(6, "onmousewheel", EventCallback.Factory.Create<WheelEventArgs>(this, e => ActualController.HandleMouseWheel(this, TranslateWheelEventArgs(e))));
@@ -374,6 +420,7 @@ namespace OxyPlot.Blazor
                 _svg = elementReference;
                 _timer.Enabled = _svg.Id != null;
                 _timerMouse.Enabled = _svg.Id != null;
+                _timerTouch.Enabled = _svg.Id != null;
             });
             if (_svgPos.Width > 0)
             {
@@ -464,10 +511,13 @@ namespace OxyPlot.Blazor
             if (firstRender)
             {
                 var objRef = DotNetObjectReference.Create(this);
-                await OxyJS.RegisterMove(objRef,_svg, "UpdateMousePos");
+                await OxyJS.RegisterMove(objRef, _svg, "UpdateMousePos");
+                await OxyJS.RegisterTouch(objRef, _svg, "UpdateTouchPos");
                 _timer.Elapsed += TimerExpired;
                 _timerMouse.Interval = RefreshTime;
                 _timerMouse.Elapsed += UpdateMouseMove;
+                _timerTouch.Interval = RefreshTime;
+                _timerTouch.Elapsed += UpdateTouchMove;
                 //because the timer runs after 500ms, call this function here at first for better user experience
                 await InvokeAsync(UpdateSvgBoundingRect);
             }
@@ -519,6 +569,7 @@ namespace OxyPlot.Blazor
             };
 
         private List<ScreenPoint> _previousTouches = null;
+        private List<ScreenPoint> _currentTouches = new List<ScreenPoint>();
         private OxyTouchEventArgs TranslateTouchEventArgs(TouchEventArgs e)
         {
             List<ScreenPoint> points = new List<ScreenPoint>();
@@ -528,6 +579,14 @@ namespace OxyPlot.Blazor
             }
             if (_previousTouches == null)
                 _previousTouches = points;
+            lock (_currentTouches)
+            {
+                _currentTouches.Clear();
+                foreach (var item in e.Touches)
+                {
+                    _currentTouches.Add(new ScreenPoint(item.ClientX - _svgPos.Left, item.ClientY - _svgPos.Top));
+                }
+            }
             var a = new OxyTouchEventArgs(points.ToArray(), _previousTouches.ToArray());
             _previousTouches.Clear();
             _previousTouches = points;
@@ -582,6 +641,14 @@ namespace OxyPlot.Blazor
                 {
                     _timerMouse.Elapsed -= UpdateMouseMove;
                     _timerMouse.Dispose();
+                }
+                catch (Exception)
+                {
+                }
+                try
+                {
+                    _timerTouch.Elapsed -= UpdateTouchMove;
+                    _timerTouch.Dispose();
                 }
                 catch (Exception)
                 {

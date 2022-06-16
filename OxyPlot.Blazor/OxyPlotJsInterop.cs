@@ -51,10 +51,15 @@ namespace OxyPlot.Blazor
             return new DataPoint(o[0], o[1]);
 
         }
-        public async ValueTask RegisterMove(DotNetObjectReference<BlazorPlotView> objRef, ElementReference element,  string func)
+        public async ValueTask RegisterMove(DotNetObjectReference<BlazorPlotView> objRef, ElementReference element, string func)
         {
             var js = await _moduleTask.Value.ConfigureAwait(false);
             await js.InvokeVoidAsync("registerMove", objRef, element, func).ConfigureAwait(false);
+        }
+        public async ValueTask RegisterTouch(DotNetObjectReference<BlazorPlotView> objRef, ElementReference element, string func)
+        {
+            var js = await _moduleTask.Value.ConfigureAwait(false);
+            await js.InvokeVoidAsync("registerTouch", objRef, element, func).ConfigureAwait(false);
         }
         public async ValueTask DisposeAsync()
         {
