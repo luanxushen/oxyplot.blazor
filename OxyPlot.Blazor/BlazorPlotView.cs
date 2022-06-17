@@ -142,7 +142,8 @@ namespace OxyPlot.Blazor
                     }
                     await Task.Run(() => ActualController.HandleTouchDelta(this, new OxyTouchEventArgs(touches.ToArray(), _previousTouches.ToArray())));
                     _semTouch.Release();
-                    _previousTouches = _currentTouches;
+                    _previousTouches.Clear();
+                    _previousTouches = touches;
                 }
             }
             catch (Exception)
