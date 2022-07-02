@@ -519,6 +519,7 @@ namespace OxyPlot.Blazor
                 _timerMouse.Elapsed += UpdateMouseMove;
                 _timerTouch.Interval = RefreshTime;
                 _timerTouch.Elapsed += UpdateTouchMove;
+                await OxyJS.DisableContextMenu(_svg);
                 //because the timer runs after 500ms, call this function here at first for better user experience
                 await InvokeAsync(UpdateSvgBoundingRect);
             }
