@@ -1,6 +1,10 @@
 // OxyPlot.Blazor Client Side Interop
 export function getBoundingClientRect(e) {
+    if (e == null)
+        return [0, 0, 0, 0];
     const r = e.getBoundingClientRect();
+    if (r == null)
+        return [0, 0, 0, 0];
     // might return null in some cases for some values, which causes deserialization problems
     // in blazor to double.json 
     // https://github.com/belucha/oxyplot.blazor/issues/3
