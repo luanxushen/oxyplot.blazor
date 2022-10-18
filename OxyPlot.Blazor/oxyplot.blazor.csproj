@@ -9,7 +9,7 @@
 		<Description>Blazor Binding for OxyPlot</Description>
 		<PackageId>OxyPlot.Blazor</PackageId>
 		<PackageTags>Chart,Web,Blazor,Oxyplot</PackageTags>
-		<Version>2.1.9</Version>
+		<Version>2.1.10</Version>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 

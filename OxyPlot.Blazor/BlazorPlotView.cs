@@ -306,9 +306,9 @@ namespace OxyPlot.Blazor
 
             if (this.Model != null)
             {
+                ((IPlotModel)this.Model).AttachPlotView(null);//先清掉老的
                 ((IPlotModel)this.Model).AttachPlotView(this);
                 this.currentModel = this.Model;
-
                 this.InvalidatePlot(true);
             }
         }
