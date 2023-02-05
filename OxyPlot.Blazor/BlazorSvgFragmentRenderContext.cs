@@ -695,8 +695,18 @@ namespace OxyPlot.Blazor
             {
                 return OxySize.Empty;
             }
-
-            return this.TextMeasurer?.MeasureText(text, fontFamily, fontSize, fontWeight)??OxySize.Empty;
+            var size = this.TextMeasurer?.MeasureText(text, fontFamily, fontSize, fontWeight) ?? OxySize.Empty;
+            int num = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                var cc = text[i];
+                if (cc >= 256)
+                {
+                    num++;
+                }
+            }
+            size = new OxySize((size.Width + num * fontSize * 0.741) * 1.35, size.Height);
+            return size;
         }
 
         /// <summary>
