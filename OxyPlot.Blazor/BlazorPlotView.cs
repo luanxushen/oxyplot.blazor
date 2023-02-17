@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Components.Web;
 using System.Timers;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
+using Microsoft.JSInterop;
+using System.Collections.Generic;
 
 namespace OxyPlot.Blazor
 {
@@ -73,6 +75,98 @@ namespace OxyPlot.Blazor
         /// Gets or sets the model.
         /// </summary>
         [Parameter][Required] public PlotModel Model { get; set; }
+
+
+        readonly Timer _timerMouse = new Timer(500) { Enabled = false, };
+        readonly Timer _timerTouch = new Timer(500) { Enabled = false, };
+        /// <summary>
+        /// refresh time for mouse optimized
+        /// </summary>
+        [Parameter] public int RefreshTime { get; set; } = 500;
+        /// <summary>
+        /// true-open mouse optimized, deal mouse event after RefreshTime
+        /// </summary>
+        [Parameter] public bool MouseOptimized { get; set; } = true;
+
+        private DataPoint _mousePos = new DataPoint(0, 0);
+        private System.Threading.Semaphore _sem = new(1, 1);
+        private DataPoint MousePosition = new DataPoint(0, 0);
+        [JSInvokable]
+        public void UpdateMousePos(double[] d)
+        {
+            MousePosition = new DataPoint(d[0], d[1]);
+        }
+        async void UpdateMouseMove(object _1, EventArgs _2)
+        {
+            try
+            {
+                if (MouseOptimized)
+                {
+
+                    if (!_sem.WaitOne(1))
+                        return;
+                    //这里有个风险，如果后面崩溃了，最后release不掉就再也进不来了
+                    //var m = await _svg.GetMousePosAsync(JSRuntime).ConfigureAwait(false);
+                    var m = new DataPoint(MousePosition.X - _svgPos.Left, MousePosition.Y - _svgPos.Top);
+                    if (Math.Abs(_mousePos.X - m.X) > 1
+                    || Math.Abs(_mousePos.Y - m.Y) > 1)
+                    {
+                        _mousePos = m;
+                        var e = new MouseEventArgs() { OffsetX = m.X, OffsetY = m.Y };
+                        if (_svgPos.Width > 0)
+                            await Task.Run(() => ActualController.HandleMouseMove(this, TranslateMouseEventArgs(e)));
+                    }
+
+                    _sem.Release();
+                }
+            }
+            catch (Exception)
+            {
+                // swallow thisone
+            }
+        }
+
+        private System.Threading.Semaphore _semTouch = new(1, 1);
+        [JSInvokable]
+        public void UpdateTouchPos(TouchPoint[] e)
+        {
+            lock (_currentTouches)
+            {
+                _currentTouches.Clear();
+                foreach (var item in e)
+                    _currentTouches.Add(new ScreenPoint(item.ClientX - _svgPos.Left, item.ClientY - _svgPos.Top));
+            }
+        }
+        async void UpdateTouchMove(object _1, EventArgs _2)
+        {
+            try
+            {
+                if (MouseOptimized)
+                {
+                    if (_currentTouches == null || _currentTouches.Count == 0)
+                        return;
+                    if (!_semTouch.WaitOne(1))
+                        return;
+                    if (_previousTouches == null)
+                        _previousTouches = _currentTouches;
+                    //这里有个风险，如果后面崩溃了，最后release不掉就再也进不来了
+                    List<ScreenPoint> touches = new List<ScreenPoint>();//为了不锁住currentTouch，重新实例化一个用于后续处理
+                    lock (_currentTouches)
+                    {
+                        foreach (ScreenPoint point in _currentTouches)
+                            touches.Add(new ScreenPoint(point.X, point.Y));
+                    }
+                    await Task.Run(() => ActualController.HandleTouchDelta(this, new OxyTouchEventArgs(touches.ToArray(), _previousTouches.ToArray())));
+                    _semTouch.Release();
+                    _previousTouches.Clear();
+                    _previousTouches = touches;
+                }
+            }
+            catch (Exception)
+            {
+                // swallow thisone
+            }
+        }
 
         async void TimerExpired(object _, EventArgs __)
         {
@@ -227,6 +321,7 @@ namespace OxyPlot.Blazor
                 }
                 if (Model != null)
                 {
+                    ((IPlotModel)Model).AttachPlotView(null);//先清掉老的
                     ((IPlotModel)Model).AttachPlotView(this);
                     _currentModel = Model;
                 }
@@ -234,7 +329,7 @@ namespace OxyPlot.Blazor
             }
         }
 
-        void AddEventCallback<T>(RenderTreeBuilder builder, int sequence, string name, Action<T> callback, bool preventDefault=true, bool stopPropagtion=true, bool addAlways = true )
+        void AddEventCallback<T>(RenderTreeBuilder builder, int sequence, string name, Action<T> callback, bool preventDefault = true, bool stopPropagtion = true, bool addAlways = true)
         {
             builder.AddAttribute(sequence, name, EventCallback.Factory.Create<T>(this, callback));
             if (preventDefault || addAlways)
@@ -253,6 +348,8 @@ namespace OxyPlot.Blazor
             {
                 _svg = new ElementReference();
                 _timer.Enabled = false;
+                _timerMouse.Enabled = false;
+                _timerTouch.Enabled = false;
                 return;
             }
             // note this gist about seequence numbers
@@ -275,7 +372,7 @@ namespace OxyPlot.Blazor
             {
                 _svgPos = new OxyRect(0, 0, wpx, hpx);
             }
-            if (_svgPos.Width > 0)
+            if (_svgPos.Width >= 0)
             {
                 builder.AddAttribute(5, "viewBox", FormattableString.Invariant($"0 0 {_svgPos.Width} {_svgPos.Height}"));
                 if (!string.IsNullOrEmpty(PreserveAspectRation))
@@ -288,18 +385,31 @@ namespace OxyPlot.Blazor
                 AddEventCallback<MouseEventArgs>(builder, 7, "onmousedown", e => ActualController.HandleMouseDown(this, TranslateMouseEventArgs(e)));
                 AddEventCallback<MouseEventArgs>(builder, 8, "onmouseup", e => ActualController.HandleMouseUp(this, TranslateMouseEventArgs(e)));
                 AddEventCallback<MouseEventArgs>(builder, 9, "oncontextmenu", e => ActualController.HandleMouseUp(this, TranslateMouseEventArgs(e)));
-                AddEventCallback<MouseEventArgs>(builder, 10, "onmousemove", e => ActualController.HandleMouseMove(this, TranslateMouseEventArgs(e)));
-                AddEventCallback<MouseEventArgs>(builder, 11, "onmouseenter", e => ActualController.HandleMouseEnter(this, TranslateMouseEventArgs(e)));
-                AddEventCallback<MouseEventArgs>(builder, 12, "onmouseleave", e => ActualController.HandleMouseEnter(this, TranslateMouseEventArgs(e)));
+                //AddEventCallback<MouseEventArgs>(builder, 10, "onmousemove", e => ActualController.HandleMouseMove(this, TranslateMouseEventArgs(e)));
+                //AddEventCallback<MouseEventArgs>(builder, 11, "onmouseenter", e => ActualController.HandleMouseEnter(this, TranslateMouseEventArgs(e)));
+                //AddEventCallback<MouseEventArgs>(builder, 12, "onmouseleave", e => ActualController.HandleMouseEnter(this, TranslateMouseEventArgs(e)));
                 AddEventCallback<WheelEventArgs>(builder, 13, "onmousewheel", e => ActualController.HandleMouseWheel(this, TranslateWheelEventArgs(e)), preventDefault: false);
                 AddEventCallback<KeyboardEventArgs>(builder, 14, "onkeydown", HandleKeyDownEvent, preventDefault: _preventKey, addAlways: true);
+
+                if (!MouseOptimized)
+                {
+                    AddEventCallback<MouseEventArgs>(builder, 10, "onmousemove", e => ActualController.HandleMouseMove(this, TranslateMouseEventArgs(e)));
+                    AddEventCallback<MouseEventArgs>(builder, 11, "onmouseenter", e => ActualController.HandleMouseEnter(this, TranslateMouseEventArgs(e)));
+                    AddEventCallback<MouseEventArgs>(builder, 12, "onmouseleave", e => ActualController.HandleMouseEnter(this, TranslateMouseEventArgs(e)));
+                }
+                AddEventCallback<TouchEventArgs>(builder, 15, "ontouchstart", e => ActualController.HandleTouchStarted(this, TranslateTouchEventArgs(e)));
+                if (!MouseOptimized)
+                    AddEventCallback<TouchEventArgs>(builder, 16, "ontouchmove", e => ActualController.HandleTouchDelta(this, TranslateTouchEventArgs(e)));
+                AddEventCallback<TouchEventArgs>(builder, 17, "ontouchend", e => ActualController.HandleTouchCompleted(this, TranslateTouchEventArgs(e)));
             }
-            builder.AddAttribute(15, "class", Class);
-            builder.AddAttribute(16, "style", Style);
-            builder.AddElementReferenceCapture(17, elementReference =>
+            builder.AddAttribute(18, "class", Class);
+            builder.AddAttribute(19, "style", Style);
+            builder.AddElementReferenceCapture(20, elementReference =>
             {
                 _svg = elementReference;
                 _timer.Enabled = _svg.Id != null;
+                _timerMouse.Enabled = _svg.Id != null;
+                _timerTouch.Enabled = _svg.Id != null;
             });
             if (_svgPos.Width > 0 && _currentModel is IPlotModel plotModel)
             {
@@ -373,11 +483,21 @@ namespace OxyPlot.Blazor
             }
             builder.CloseElement();
         }
-        protected override void OnAfterRender(bool firstRender)
+        protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender)
+            {
+                var objRef = DotNetObjectReference.Create(this);
+                await OxyJS.RegisterMove(objRef, _svg, "UpdateMousePos");
+                await OxyJS.RegisterTouch(objRef, _svg, "UpdateTouchPos");
                 _timer.Elapsed += TimerExpired;
-            UpdateSvgBoundingRect();
+                _timerMouse.Interval = RefreshTime;
+                _timerMouse.Elapsed += UpdateMouseMove;
+                _timerTouch.Interval = RefreshTime;
+                _timerTouch.Elapsed += UpdateTouchMove;
+                //because the timer runs after 500ms, call this function here at first for better user experience
+                await InvokeAsync(UpdateSvgBoundingRect);
+            }
         }
 
         private static OxyModifierKeys TranslateModifierKeys(MouseEventArgs e)
@@ -392,6 +512,32 @@ namespace OxyPlot.Blazor
             if (e.MetaKey)
                 result |= OxyModifierKeys.Windows;
             return result;
+        }
+
+        private List<ScreenPoint> _previousTouches = null;
+        private List<ScreenPoint> _currentTouches = new List<ScreenPoint>();
+        private OxyTouchEventArgs TranslateTouchEventArgs(TouchEventArgs e)
+        {
+            List<ScreenPoint> points = new List<ScreenPoint>();
+            foreach (var item in e.ChangedTouches)
+            {
+                points.Add(new ScreenPoint(item.ClientX - _svgPos.Left, item.ClientY - _svgPos.Top));
+            }
+            if (_previousTouches == null)
+                _previousTouches = points;
+            lock (_currentTouches)
+            {
+                _currentTouches.Clear();
+                foreach (var item in e.Touches)
+                {
+                    _currentTouches.Add(new ScreenPoint(item.ClientX - _svgPos.Left, item.ClientY - _svgPos.Top));
+                }
+            }
+            var a = new OxyTouchEventArgs(points.ToArray(), _previousTouches.ToArray());
+            _previousTouches.Clear();
+            _previousTouches = points;
+            return a;
+
         }
         private static OxyModifierKeys TranslateModifierKeys(KeyboardEventArgs e)
         {
@@ -528,8 +674,30 @@ namespace OxyPlot.Blazor
         {
             if (!_disposed)
             {
-                _timer.Elapsed -= TimerExpired;
-                _timer.Dispose();
+                try
+                {
+                    _timer.Elapsed -= TimerExpired;
+                    _timer.Dispose();
+                }
+                catch (Exception)
+                {
+                }
+                try
+                {
+                    _timerMouse.Elapsed -= UpdateMouseMove;
+                    _timerMouse.Dispose();
+                }
+                catch (Exception)
+                {
+                }
+                try
+                {
+                    _timerTouch.Elapsed -= UpdateTouchMove;
+                    _timerTouch.Dispose();
+                }
+                catch (Exception)
+                {
+                }
                 // detach model from view (closes #5)
                 if (_currentModel != null)
                 {

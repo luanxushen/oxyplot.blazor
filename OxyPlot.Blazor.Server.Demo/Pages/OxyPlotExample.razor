@@ -18,7 +18,7 @@
     </h2>
     <h4>@_exampleInfo.Title</h4>
     <h6>@string.Join(", ", _exampleInfo.Tags)</h6>
-    <BlazorPlotView Width="100%" Height="70vh" Model="_exampleInfo.PlotModel" Controller=@_exampleInfo.PlotController />
+    <BlazorPlotView Width="100%" Height="70vh" Model="_exampleInfo.PlotModel" Controller=@_exampleInfo.PlotController  MouseOptimized="true" RefreshTime="100"/>
 }
 @code {
     [Parameter] public int? Id { get; set; }

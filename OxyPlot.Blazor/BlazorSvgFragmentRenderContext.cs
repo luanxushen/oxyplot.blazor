@@ -16,6 +16,7 @@ namespace OxyPlot.Blazor
     using System.Text;
     using Microsoft.AspNetCore.Components.Rendering;
     using System.Text.RegularExpressions;
+    using System.Linq;
 
     /// <summary>
     /// Provides a render context for scalable vector graphics output.
@@ -645,8 +646,18 @@ namespace OxyPlot.Blazor
             {
                 return OxySize.Empty;
             }
-
-            return TextMeasurer?.MeasureText(text, fontFamily, fontSize, fontWeight) ?? OxySize.Empty;
+            var size = this.TextMeasurer?.MeasureText(text, fontFamily, fontSize, fontWeight) ?? OxySize.Empty;
+            int num = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                var cc = text[i];
+                if (cc >= 256)
+                {
+                    num++;
+                }
+            }
+            size = new OxySize((size.Width + num * fontSize * 0.741) * 1.35, size.Height);
+            return size;
         }
 
         /// <summary>
