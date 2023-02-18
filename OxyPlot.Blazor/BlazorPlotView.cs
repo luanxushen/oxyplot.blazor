@@ -298,7 +298,7 @@ namespace OxyPlot.Blazor
         public void ShowZoomRectangle(OxyRect rectangle)
         {
             _zoomRectangle = rectangle;
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         }
 
         /// <summary>

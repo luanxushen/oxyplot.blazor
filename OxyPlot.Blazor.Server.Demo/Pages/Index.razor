@@ -5,7 +5,7 @@
 @using OxyPlot.Series
 @using OxyPlot.Blazor
 <h3>Blazored Oxy Plot Test</h3>
-<BlazorPlotView @ref=@_view1 Width="100%" Height="300px" Model="_model1" Controller=@_c />
+<BlazorPlotView @ref=@_view1 Width="100%" Height="300px" Model="_model1" Controller=@_c MouseOptimized="true"  RefreshTime="100"/>
 <BlazorPlotView Width="100%" Height="300px" Model="_model2" ReverseMouseWheel=true />
 
 @code {
@@ -20,10 +20,11 @@
     public static PlotModel BarSeries()
     {
 
-        var model = new PlotModel { 
-            Title = "Cake Type Popularity",
-            Subtitle = "Use 'I' and 'O' Keys to zoom, 'F1' resets zoom!",
-        };
+        var model = new PlotModel
+            {
+                Title = "Cake Type Popularity",
+                Subtitle = "Use 'I' and 'O' Keys to zoom, 'F1' resets zoom!",
+            };
         //generate a random percentage distribution between the 5
         //cake-types (see axis below)
         var rand = new Random();
@@ -40,7 +41,7 @@
                 XAxisKey = "Value",
                 YAxisKey = "CakeAxis",
                 ItemsSource = new List<BarItem>(new[]
-                        {
+                            {
                 new BarItem{ Value = (cakePopularity[0] / sum * 100) },
                 new BarItem{ Value = (cakePopularity[1] / sum * 100) },
                 new BarItem{ Value = (cakePopularity[2] / sum * 100) },
@@ -96,6 +97,19 @@
         }
     });
 
+    private static PlotController CreateController()
+    {
+        var controller = new PlotController();
+        controller.InputCommandBindings.Clear();
+        controller.BindMouseDown(OxyMouseButton.Left, OxyModifierKeys.None, 2, PlotCommands.ResetAt);
+        controller.BindMouseDown(OxyMouseButton.Left, PlotCommands.ZoomRectangle);
+        controller.BindMouseDown(OxyMouseButton.Right, PlotCommands.PanAt);
+        controller.BindMouseWheel(PlotCommands.ZoomWheel);
+        //controller.BindTouchDown(new DelegatePlotCommand<OxyTouchEventArgs>((view, controller, args) => controller.AddTouchManipulator(view, new MTouchManipulator(view), args)));
+        return controller;
+
+    }
+
     protected override void OnInitialized()
     {
         _c.UnbindAll();
@@ -103,6 +117,11 @@
         _c.BindKeyDown(OxyKey.I, PlotCommands.ZoomIn);
         _c.BindKeyDown(OxyKey.O, PlotCommands.ZoomOut);
         _c.BindKeyDown(OxyKey.F1, PlotCommands.Reset);
+        _c.BindMouseDown(OxyMouseButton.Left, OxyModifierKeys.None, 2, PlotCommands.ResetAt);
+        _c.BindMouseDown(OxyMouseButton.Left, PlotCommands.ZoomRectangle);
+        _c.BindMouseDown(OxyMouseButton.Right, PlotCommands.PanAt);
+        _c.BindMouseWheel(PlotCommands.ZoomWheel);
+  
         _model2 = BuildModel();
         _model1 = BarSeries();
         _update.Elapsed += UpdateData;
@@ -112,7 +131,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
-        if (firstRender && _view1!=null)
+        if (firstRender && _view1 != null)
         {
             await _view1.FocusAsync();
         }
