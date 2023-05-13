@@ -187,7 +187,7 @@ namespace OxyPlot.Blazor
             // http://www.w3.org/TR/SVG/masking.html
             // https://developer.mozilla.org/en-US/docs/Web/SVG/Element/clipPath
             // http://www.svgbasics.com/clipping.html
-            var clipPath = $"clipPath{clipPathNumber++}";
+            var clipPath = $"clipPath-{x:0}-{y:0}-{width:0}-{height:0}-{clipPathNumber++}";
 
             WriteStartElement("defs");
             WriteStartElement("clipPath");
