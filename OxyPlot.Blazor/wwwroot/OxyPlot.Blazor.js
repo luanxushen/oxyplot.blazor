@@ -18,6 +18,11 @@ export function getMousePos(e) {
 }
 
 export function disableContextMenu(element) {
+    if (element == null)
+    {
+        console.warn("element is null for addEventListener");
+        return;
+    }
     element.addEventListener('contextmenu', ev => {
         ev.preventDefault();
         return false;
@@ -30,7 +35,10 @@ export function setCursor(element, cursorName) {
 }
 
 export function registerMove(obj, element, method) {
-
+    if (element == null) {
+        console.warn("element is null for addEventListener");
+        return;
+    }
     element.addEventListener('mousemove', event => {
         const cursor_x = event.pageX;
         const cursor_y = event.pageY;
@@ -40,7 +48,10 @@ export function registerMove(obj, element, method) {
 }
 
 export function registerTouch(obj, element, method) {
-
+    if (element == null) {
+        console.warn("element is null for addEventListener");
+        return;
+    }
     element.addEventListener('touchmove', event => {
         const ts = event.touches;
         var touches = [];
