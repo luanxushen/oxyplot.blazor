@@ -2,11 +2,12 @@
 @implements IDisposable
 @using OxyPlot
 @using OxyPlot.Axes
+@using OxyPlot.Legends
 @using OxyPlot.Series
 @using OxyPlot.Blazor
 <h3>Blazored Oxy Plot Test</h3>
-<BlazorPlotView @ref=@_view1 Width="100%" Height="300px" Model="_model1" Controller=@_c MouseOptimized="true"  RefreshTime="100"/>
-<BlazorPlotView Width="100%" Height="300px" Model="_model2" ReverseMouseWheel=true />
+<BlazorPlotView @ref=@_view1 Width="100%" Height="300px" Model="_model1" Controller=@_c MouseOptimized="true" RefreshTime="100" />
+<BlazorPlotView Width="100%" Height="400px" Model="_model2" ReverseMouseWheel=true MouseOptimized="true" />
 
 @code {
     System.Timers.Timer _update = new System.Timers.Timer(1000);
@@ -41,7 +42,7 @@
                 XAxisKey = "Value",
                 YAxisKey = "CakeAxis",
                 ItemsSource = new List<BarItem>(new[]
-                            {
+                                {
                 new BarItem{ Value = (cakePopularity[0] / sum * 100) },
                 new BarItem{ Value = (cakePopularity[1] / sum * 100) },
                 new BarItem{ Value = (cakePopularity[2] / sum * 100) },
@@ -76,7 +77,8 @@
         var yAxis = new LinearAxis { Position = AxisPosition.Left, };   // , Minimum = -0.5, Maximum = 5.5,
         model.Axes.Add(yAxis);
         model.Axes.Add(new LinearAxis { Position = AxisPosition.Bottom });
-        model.Series.Add(new FunctionSeries(Math.Sin, 0, 10, 1000));
+        model.Series.Add(new FunctionSeries(Math.Sin, 0, 10, 1000) { Title = "Linie 1" });
+        model.Legends.Add(new Legend());
         _line2 = new LineSeries();
         _line2.Title = "Linie 2";
         _line2.Color = OxyColors.Red;
@@ -121,7 +123,7 @@
         _c.BindMouseDown(OxyMouseButton.Left, PlotCommands.ZoomRectangle);
         _c.BindMouseDown(OxyMouseButton.Right, PlotCommands.PanAt);
         _c.BindMouseWheel(PlotCommands.ZoomWheel);
-  
+
         _model2 = BuildModel();
         _model1 = BarSeries();
         _update.Elapsed += UpdateData;

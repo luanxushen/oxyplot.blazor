@@ -27,6 +27,6 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="OxyPlot.Core" Version="2.1.3" />
+		<PackageReference Include="OxyPlot.Core" Version="2.1.6" />
 	</ItemGroup>
 </Project>
