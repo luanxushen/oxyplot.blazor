@@ -11,7 +11,7 @@
 		<IsPackable>true</IsPackable>
 		<PackageTags>Chart,Web,Blazor,Oxyplot</PackageTags>
 		<PackageReadmeFile>README.MD</PackageReadmeFile>
-		<Version>2.5.5</Version>
+		<Version>2.5.6</Version>
 		<Nullable>enable</Nullable>
 		<OutputType>Library</OutputType>
 	</PropertyGroup>
@@ -27,6 +27,6 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="OxyPlot.Core" Version="2.1.6" />
+		<PackageReference Include="OxyPlot.Core" Version="2.1.7" />
 	</ItemGroup>
 </Project>

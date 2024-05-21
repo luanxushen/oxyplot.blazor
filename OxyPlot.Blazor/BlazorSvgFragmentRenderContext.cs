@@ -343,7 +343,6 @@ namespace OxyPlot.Blazor
             WriteTitle();
             WriteEndElement();
         }
-
         /// <summary>
         /// Writes text.
         /// </summary>
@@ -357,19 +356,21 @@ namespace OxyPlot.Blazor
         /// <param name="halign">The horizontal alignment.</param>
         /// <param name="valign">The vertical alignment.</param>
         public void WriteText(
-            ScreenPoint position,
-            string text,
-            OxyColor fill,
-            string? fontFamily = null,
-            double fontSize = 10,
-            double fontWeight = FontWeights.Normal,
-            double rotate = 0,
-            HorizontalAlignment halign = HorizontalAlignment.Left,
-            VerticalAlignment valign = VerticalAlignment.Top)
+        ScreenPoint position,
+        string text,
+        string key,
+        OxyColor fill,
+        string? fontFamily = null,
+        double fontSize = 10,
+        double fontWeight = FontWeights.Normal,
+        double rotate = 0,
+        HorizontalAlignment halign = HorizontalAlignment.Left,
+        VerticalAlignment valign = VerticalAlignment.Top)
         {
             // http://www.w3.org/TR/SVG/text.html
             WriteStartElement("text");
-
+            if (!string.IsNullOrEmpty(key))
+                _b.SetKey($"{key}{fill}");//只把key字符串设置的话，由于Legend变颜色key不会变，导致blazor计算有问题，还是会崩，因此加了fill
             // WriteAttributeString("x", position.X);
             // WriteAttributeString("y", position.Y);
             string baselineAlignment = "hanging";
@@ -579,6 +580,40 @@ namespace OxyPlot.Blazor
             VerticalAlignment valign,
             OxySize? maxSize)
         {
+            this.DrawText(p, text, "", c, fontFamily, fontSize, fontWeight, rotate, halign, valign, maxSize);
+        }
+
+
+
+
+        /// <summary>
+        /// Draws the text.
+        /// </summary>
+        /// <param name="p">The position of the text.</param>
+        /// <param name="text">The text.</param>
+        /// <param name="key"></param>
+        /// <param name="fill">The fill color.</param>
+        /// <param name="fontFamily">The font family.</param>
+        /// <param name="fontSize">Size of the font.</param>
+        /// <param name="fontWeight">The font weight.</param>
+        /// <param name="rotate">The rotation angle.</param>
+        /// <param name="halign">The horizontal alignment.</param>
+        /// <param name="valign">The vertical alignment.</param>
+        /// <param name="maxSize">The maximum size of the text.</param>
+        public override void DrawText(
+            ScreenPoint p,
+            string text,
+            string key,
+            OxyColor c,
+            string fontFamily,
+            double fontSize,
+            double fontWeight,
+            double rotate,
+            HorizontalAlignment halign,
+            VerticalAlignment valign,
+            OxySize? maxSize)
+        {
+
             if (string.IsNullOrEmpty(text))
             {
                 return;
@@ -601,7 +636,7 @@ namespace OxyPlot.Blazor
                 foreach (var line in lines)
                 {
                     var size = MeasureText(line, fontFamily, fontSize, fontWeight);
-                    WriteText(p, line, c, fontFamily, fontSize, fontWeight, rotate, halign, valign);
+                    WriteText(p, line, key, c, fontFamily, fontSize, fontWeight, rotate, halign, valign);
 
                     p += lineOffset;
                 }
@@ -614,7 +649,7 @@ namespace OxyPlot.Blazor
                     {
                         var line = lines[i];
                         _ = MeasureText(line, fontFamily, fontSize, fontWeight);
-                        WriteText(p, line, c, fontFamily, fontSize, fontWeight, rotate, halign, valign);
+                        WriteText(p, line, key, c, fontFamily, fontSize, fontWeight, rotate, halign, valign);
 
                         p -= lineOffset;
                     }
@@ -624,13 +659,14 @@ namespace OxyPlot.Blazor
                     foreach (var line in lines)
                     {
                         var size = MeasureText(line, fontFamily, fontSize, fontWeight);
-                        WriteText(p, line, c, fontFamily, fontSize, fontWeight, rotate, halign, valign);
+                        WriteText(p, line, key, c, fontFamily, fontSize, fontWeight, rotate, halign, valign);
 
                         p += lineOffset;
                     }
                 }
             }
         }
+
 
         /// <summary>
         /// Measures the text.
