@@ -53,6 +53,7 @@ export function registerTouch(obj, element, method) {
         return;
     }
     element.addEventListener('touchmove', event => {
+        event.preventDefault();
         const ts = event.touches;
         var touches = [];
         for (var index = 0; index < ts.length; index++) {
