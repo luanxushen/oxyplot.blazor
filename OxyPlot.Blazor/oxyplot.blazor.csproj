@@ -11,7 +11,7 @@
 		<IsPackable>true</IsPackable>
 		<PackageTags>Chart,Web,Blazor,Oxyplot</PackageTags>
 		<PackageReadmeFile>README.MD</PackageReadmeFile>
-		<Version>2.5.7</Version>
+		<Version>2.5.8</Version>
 		<Nullable>enable</Nullable>
 		<OutputType>Library</OutputType>
 	</PropertyGroup>

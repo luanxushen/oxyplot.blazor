@@ -23,6 +23,9 @@ export function disableContextMenu(element) {
         console.warn("element is null for addEventListener");
         return;
     }
+    if (typeof (element.addEventListener) !== 'function') {
+        return;
+    }
     element.addEventListener('contextmenu', ev => {
         ev.preventDefault();
         return false;
@@ -39,6 +42,9 @@ export function registerMove(obj, element, method) {
         console.warn("element is null for addEventListener");
         return;
     }
+    if (typeof (element.addEventListener) !== 'function') {
+        return;
+    }
     element.addEventListener('mousemove', event => {
         const cursor_x = event.pageX;
         const cursor_y = event.pageY;
@@ -50,6 +56,9 @@ export function registerMove(obj, element, method) {
 export function registerTouch(obj, element, method) {
     if (element == null) {
         console.warn("element is null for addEventListener");
+        return;
+    }
+    if (typeof (element.addEventListener) !== 'function') {
         return;
     }
     element.addEventListener('touchmove', event => {

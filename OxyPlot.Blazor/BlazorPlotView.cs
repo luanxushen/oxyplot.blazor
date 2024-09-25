@@ -346,7 +346,7 @@ namespace OxyPlot.Blazor
         {
             if (_currentModel == null)
             {
-                _svg = new ElementReference();
+                _svg = default;
                 _timer.Enabled = false;
                 _timerMouse.Enabled = false;
                 _timerTouch.Enabled = false;
